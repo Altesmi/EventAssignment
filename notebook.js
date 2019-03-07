@@ -1,16 +1,16 @@
-// URL: https://beta.observablehq.com/d/a94651ff4bb1a056
-// Title: Osallistujien j‰rjest‰minen tapahtumiin halukkuuksien mukaan
+// URL: https://observablehq.com/@altesmi/event-assignment
+// Title: Event assignment
 // Author: Olli-Pekka Tikkanen (@altesmi)
-// Version: 631
+// Version: 1026
 // Runtime version: 1
 
 const m0 = {
-  id: "a94651ff4bb1a056@631",
+  id: "a94651ff4bb1a056@1026",
   variables: [
     {
       inputs: ["md"],
       value: (function(md){return(
-md`# Osallistujien j‰rjest‰minen tapahtumiin halukkuuksien mukaan`
+md`# Event assignment`
 )})
     },
     {
@@ -31,7 +31,7 @@ md`M‰‰rit‰ osallistuvien optimoinnissa k‰ytett‰v‰t parametrit. Ryhmien koko arvo
       value: (function(slider){return(
 slider({
   min: 1,
-  max: 1000,
+  max: 300,
   step: 1,
   title: "?? Osallistuvien ryhmien lukum‰‰r‰",
   value: 50
@@ -171,7 +171,7 @@ md `### PADG`
     {
       inputs: ["md"],
       value: (function(md){return(
-md `Kokonaisonnellisuus uudella algortimilla (PADG) (jos jokainen asetetaan omaan ykkˆsvalintaansa onnellisuus on 100%)`
+md `Kokonaisonnellisuus (jos jokainen asetetaan omaan ykkˆsvalintaansa onnellisuus on 100%)`
 )})
     },
     {
@@ -189,7 +189,37 @@ md `${arrangement.filter(ele => ele.assignment===-1).length} (${Math.round(arran
     {
       inputs: ["md"],
       value: (function(md){return(
-md ``
+md `### Random matching`
+)})
+    },
+    {
+      inputs: ["md"],
+      value: (function(md){return(
+md `Kokonaisonnellisuus`
+)})
+    },
+    {
+      inputs: ["totalHappiness","randomArrangement","groups","numOsallistujat"],
+      value: (function(totalHappiness,randomArrangement,groups,numOsallistujat){return(
+`${Math.round(totalHappiness(randomArrangement,groups)/numOsallistujat * 10000)/100}%`
+)})
+    },
+    {
+      inputs: ["md","randomArrangement","numOsallistujat"],
+      value: (function(md,randomArrangement,numOsallistujat){return(
+md `${randomArrangement.filter(ele => ele.assignment===-1).length} (${Math.round(randomArrangement.filter(ele => ele.assignment===-1).length/numOsallistujat*10000)/100}%) ryhm‰‰ j‰i ilman paikkaa`
+)})
+    },
+    {
+      inputs: ["md"],
+      value: (function(md){return(
+md `### menetelmien vertailu`
+)})
+    },
+    {
+      inputs: ["totalHappiness","arrangement","groups","randomArrangement"],
+      value: (function(totalHappiness,arrangement,groups,randomArrangement){return(
+`PADG on ${Math.round((totalHappiness(arrangement,groups)/totalHappiness(randomArrangement,groups)-1)*10000)/100} % parempi (negativinen luku tarkoittaa huonompaa)`
 )})
     },
     {
@@ -206,26 +236,97 @@ md `Optimoinnin tavoitteena on maksimoida listassa ***L*** oleva tyytyv‰isyys`
     },
     {
       name: "arrangement",
-      inputs: ["PADGopt","L","events","groups"],
-      value: (function(PADGopt,L,events,groups){return(
-PADGopt(L,events,groups)
+      inputs: ["runPADGMultipleTimes","L","events","groups"],
+      value: (function(runPADGMultipleTimes,L,events,groups){return(
+runPADGMultipleTimes(L,events,groups)
 )})
     },
     {
-      inputs: ["arrangement","groups"],
-      value: (function(arrangement,groups)
-{
-  for(let i=0;i<1;i++) {
-    let notAssigned = arrangement.filter(ele => ele.assignment === -1)
+      name: "runPADGMultipleTimes",
+      inputs: ["PADGopt","L","totalHappiness","groups","numOsallistujat","numTapahtumat"],
+      value: (function(PADGopt,L,totalHappiness,groups,numOsallistujat,numTapahtumat){return(
+function runPADGMultipleTimes(LL,evnts,grps) {
+  let arrangement = PADGopt(L,evnts,grps,grps)
+  let happiness = totalHappiness(arrangement,groups)/numOsallistujat
+  let grp = grps.slice()
+  let numOptRounds = 5
+  for(let round = 1; round < numOptRounds; round++) {
+    //find groups that were not set to any event
+    let groupsNotAssigned = arrangement.filter(ele => ele.assignment === -1)
     let newGroups = []
-    for(let notAssignedInd in notAssigned) {
-        newGroups.push(groups.find(ele => ele.name === notAssigned[notAssignedInd].name))
+    for(let g in groupsNotAssigned){  
+      newGroups.push(groups.filter(ele => ele.name === groupsNotAssigned[g].name)[0])
     }
+
+    //update new events so that the groups already assigned to them are included
+    let newEvents = evnts.map(ele => {
+      return {
+        name: ele.name,
+        min: ele.min,
+        max: ele.max,
+      }
+    })
+
+    newEvents.playerCount = (eventName) => {
+      // function to count how many players are already assigned to an event   
+      let e = newEvents.findIndex(ele => {
+        return ele.name === eventName })
+      if(typeof(newEvents[e].groups) !== 'undefined' && newEvents[e].groups.length > 0) {
+
+        return newEvents[e].groups.reduce((a, b) => {
+          return a+grp.filter(g=>g.name === b)[0].size
+        }, 0);
+      } else {
+        return 0
+      }
+
+    }
+
+    for(let e in newEvents) {
+      let playersInThisEvent = arrangement.filter(ele=>ele.assignment === Number(e))
+                            .map(ele => ele.name)
+      if(playersInThisEvent.length>0) {
+        newEvents[e].groups = playersInThisEvent
+      }
+    }
+    //console.log(newEvents)
+    //construct new L which includes only gain from assigning groups in newGroups
+    let newL = []
+    for(let i=0;i<newGroups.length;i++) {
+      for(let j=0;j<numTapahtumat;j++) {
+        let ind = newGroups[i].pref.indexOf(j)
+        let gain = 0
+        if(ind!== -1) {
+          gain = 1/(ind+1)
+        }
+        newL.push({
+          name: newGroups[i].name,
+          event: j,
+          size: newGroups[i].size,
+          gain: gain    
+       })
+      }
+    }
+    newL = newL.sort((a,b) => a.gain - b.gain)
+    //console.log(newEvents)
+    let newArrangement = PADGopt(newL,newEvents,newGroups,grps)
+    newArrangement.map(ele => {
+      if(ele.assignment !== -1) {
+        let arrInd = arrangement.findIndex(arrEle => arrEle.name === ele.name)
+        arrangement[arrInd].assignment = ele.assignment
+        console.log(ele)
+        console.log('we did it')
+      }
+    })
   }
+  //Check that the arrangement is ok (ie every event has no more than max amount of participants and there are no 
+  //event assignments to events where minimum number of players is not reached
   
-  return `T‰h‰n silmukka, miss‰ PADG ajetaan muutaman kerran ylij‰‰neille ryhmille`
+  
+  
+  return arrangement
 }
-)
+)})
     },
     {
       inputs: ["md"],
@@ -236,31 +337,36 @@ md `PADGopt (phantom aware dynamic greedy) on algoritmi, joka yritt‰‰ asettaa li
     {
       name: "PADGopt",
       value: (function(){return(
-(L,evnt,grp) => {
+(L,evnt,grp,grpAll) => {
   //copy arrays with slice() so that the original data is not changed
   let LL = L.slice()
   let M = grp.map(e => {
     return {name: e.name,assignment: -1}
   })
-  let S = evnt.map(e => { // real events
-    return {name: e.name,
-            min: e.min,
-            max: e.max,
-            groups: []
-           }
-  })
-  // function definitions for S
-
-  S.playerCount = (e) => {
-    // function to count how many players are already assigned to an event
-    if(S[e].groups.length > 0) {
-      return S[e].groups.reduce((a, b) => {
-        return a+grp.filter(g=>g.name === b)[0].size
-      }, 0);
-    } else {
-      return 0
+  
+  let S = evnt.slice().map(ele => {
+    return {
+      name: ele.name,
+      min: ele.min,
+      max: ele.max,
+      groups: ele.hasOwnProperty('groups') ? ele.groups : []
     }
+  })
 
+  // function definitions for S
+  if(typeof(S.playerCount) === 'undefined') {
+    S.playerCount = (e) => {
+      // function to count how many players are already assigned to an event
+      
+      if(S[e].groups.length > 0) {
+        return S[e].groups.reduce((a, b) => {
+          return a+grpAll.filter(g=>g.name === b)[0].size
+        }, 0);
+      } else {
+        return 0
+      }
+
+    }
   }
 
   let P = [] // Phantom events
@@ -295,14 +401,17 @@ md `PADGopt (phantom aware dynamic greedy) on algoritmi, joka yritt‰‰ asettaa li
   let V = grp.slice()
   
   //MAIN LOOP STARTS HERE
+  //console.log(LL)
   while(LL.length>0) {
     let u = LL.pop() // u is the last index of LL
     if(u.gain === 0) {
       // consider only cases where adding u to event increases happiness
       continue
     }
+      
       let Mind = M.findIndex(g => g.name === u.name)
-
+      //console.log(u.event)
+      //console.log(S.playerCount(u.event))
       if(M[Mind].assignment === -1 && (S.playerCount(u.event) + u.size) <= evnt[u.event].max) {
         // user u is not assigned and there is space in the event where we try to place u
 
@@ -331,7 +440,7 @@ md `PADGopt (phantom aware dynamic greedy) on algoritmi, joka yritt‰‰ asettaa li
             }
 
           }
-
+          
           S[u.event].groups.push(u.name)
           V = V.filter(ele => ele.name !== u.name)
           if(S.playerCount(u.event) > evnt[u.event].min && P.includes(evnt[u.event].name) === 0) {
@@ -342,7 +451,7 @@ md `PADGopt (phantom aware dynamic greedy) on algoritmi, joka yritt‰‰ asettaa li
               ele.groups.filter(e=> e.name !== u.name)
             })
           }
-
+          
           if(S.playerCount(u.event) >= evnt[u.event].min && P.includes(evnt[u.event].name) === 1) {
             // this event is a phantom event but has no enough players to be a real event
             P.removeEntry(evnt[u.event].name) // remove this event from phantom events
@@ -359,21 +468,131 @@ md `PADGopt (phantom aware dynamic greedy) on algoritmi, joka yritt‰‰ asettaa li
         }
 
       }
-
       return M
     }
 )})
     },
     {
+      name: "randomArrangement",
+      inputs: ["randomOpt","events","groups","totalHappiness","numOsallistujat"],
+      value: (function(randomOpt,events,groups,totalHappiness,numOsallistujat)
+{ 
+ let randomArrangement = randomOpt(events,groups)
+ let randomhappiness = totalHappiness(randomArrangement,groups)/numOsallistujat
+ let newRandomArrangement = []
+ let newRandomhappiness = 0
+ //try the random arrangement 100 times to see if there are better matches
+ for(let i=0;i<1000;i++) {
+   newRandomArrangement = randomOpt(events,groups)
+   newRandomhappiness = totalHappiness(newRandomArrangement,groups)/numOsallistujat
+   if(newRandomhappiness > randomhappiness) {
+     randomhappiness = newRandomhappiness
+     randomArrangement = newRandomArrangement
+   }
+ }
+  return randomArrangement
+}
+)
+    },
+    {
       name: "randomOpt",
-      inputs: ["L"],
-      value: (function(L){return(
+      value: (function(){return(
 (evnt,grp) => {
-  let LL = L.slice()
+  
+  let allEvents = evnt.slice().map(ele => {
+    return {...ele, groups: []}})
+  
+    //define playercounter for allEvents
+  allEvents.playerCount = (eventName) => {
+    // function to count how many players are already assigned to an event   
+    let e = allEvents.findIndex(ele => {
+      return ele.name === eventName })
+    if(allEvents[e].groups.length > 0) {
+
+      return allEvents[e].groups.reduce((a, b) => {
+        return a+grp.filter(g=>g.name === b)[0].size
+      }, 0);
+    } else {
+      return 0
+    }
+
+  }
+  
+  //shuffle events in a different list. This list is iterated in the loop
+  let shuffledEvents = evnt.slice()
+                      .sort((a,b)=>Math.random()-0.5)
+
+
+  //array containing person names and their arrangements
   let M = grp.map(e => {
     return {name: e.name,assignment: -1}
   })
-  return 0
+  let V = grp.slice()
+  while(shuffledEvents.length>0) {
+    //next random event
+    let randomEvent = shuffledEvents.pop()
+    
+    
+    // index of u in evnt so that it can be compared to preferences
+    let eInd = allEvents.findIndex(ele => ele.name === randomEvent.name)
+    
+    // check if there are enough people signed up for this game
+    // in order to avoid matching some group with this event 
+    // without hope of this event ever happening
+    let numPlayersToThisEvent = 0
+    grp.filter(ele => {
+      return typeof(ele.pref.find(p => p===eInd)) !== 'undefined'})
+    .forEach(ele => {
+      numPlayersToThisEvent = numPlayersToThisEvent + ele.size
+    })
+    if(numPlayersToThisEvent < allEvents[eInd].min) {
+      //the event is not happening anyway, do not assign players to this event
+      continue
+    }
+    
+    //find a random group that wants to go to this event
+    let randomGroupToThisEvent = V.filter(ele => {
+      return typeof(ele.pref.find(p => p===eInd)) !== 'undefined'
+    }).sort((a,b)=>Math.random()-0.5).slice(0,1)
+    
+    let timesTried = 0
+    while(timesTried < 10) {
+      
+      if(randomGroupToThisEvent.length===0) {
+        //no team found, increase timesTried and continue
+        timesTried = timesTried +1
+        continue
+      }
+        
+      if(allEvents.playerCount(randomEvent.name)+randomGroupToThisEvent[0].size<=allEvents[eInd].max) {
+        //There is room to assign this group to this event. Do it
+        allEvents[eInd].groups.push(randomGroupToThisEvent[0].name)
+        timesTried = 1
+      } else {
+        timesTried = timesTried+1
+        continue
+      }
+      
+      if(allEvents.playerCount(randomEvent.name)>=allEvents[eInd].min) {
+        //This event has minimum number of players and is happening
+        //set assignments for every group in this event
+        allEvents[eInd].groups.forEach(ele => {
+          let Mind = M.findIndex(m => m.name === ele)
+          M[Mind].assignment = eInd
+        })
+      }
+      //remove every group from V so they will not be placed again
+      V = V.filter(ele => ele.name !== randomGroupToThisEvent[0].name)
+      randomGroupToThisEvent = V.filter(ele => {
+      return typeof(ele.pref.find(p => p===eInd)) !== 'undefined'
+    })
+        .sort((a,b)=>Math.random()-0.5).slice(0,1)
+      
+    }
+    
+  }
+  
+  return M
 }
 )})
     },
@@ -488,20 +707,20 @@ md `***events*** on taulukko, jossa on tapahtuman nimi ja minimi ja maksimim‰‰r‰
       inputs: ["numTapahtumat","randInt","minTapahtuma","maxTapahtuma"],
       value: (function(numTapahtumat,randInt,minTapahtuma,maxTapahtuma)
 {
-  let events = []
+  let e = []
   for(let i=0;i<numTapahtumat;i++) {
     let minOsallistujat = randInt(minTapahtuma,1);
     let maxOsallistujat = minOsallistujat
     while(maxOsallistujat <= minOsallistujat) {
       maxOsallistujat = randInt(maxTapahtuma,1)
     }
-    events.push({
+    e.push({
       name: `tapahtuma${i+1}`,
       min: minOsallistujat,
       max: maxOsallistujat
     })
   }
-  return events
+  return e
 }
 )
     },
@@ -713,14 +932,14 @@ function input(config) {
       name: "d3format",
       inputs: ["require"],
       value: (function(require){return(
-require("d3-format")
+require("d3-format@1")
 )})
     }
   ]
 };
 
 const notebook = {
-  id: "a94651ff4bb1a056@631",
+  id: "a94651ff4bb1a056@1026",
   modules: [m0,m1]
 };
 
