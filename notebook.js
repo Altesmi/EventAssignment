@@ -1,11 +1,11 @@
 // URL: https://observablehq.com/@altesmi/event-assignment
 // Title: Event assignment
 // Author: Olli-Pekka Tikkanen (@altesmi)
-// Version: 1026
+// Version: 1084
 // Runtime version: 1
 
 const m0 = {
-  id: "a94651ff4bb1a056@1026",
+  id: "a94651ff4bb1a056@1084",
   variables: [
     {
       inputs: ["md"],
@@ -22,7 +22,7 @@ md `## Input optimointiin`
     {
       inputs: ["md"],
       value: (function(md){return(
-md`M‰‰rit‰ osallistuvien optimoinnissa k‰ytett‰v‰t parametrit. Ryhmien koko arvotaan satunnaisesti ykkˆsen ja asetetun arvon v‰lill‰. V‰hint‰‰n asetettu prosenttiosuuden verran ryhmist‰ saa koon '1'. Tapahtumat joihin ryhm‰ haluaa menn‰ ja niiden lukum‰‰r‰ arvotaan satunnaisesti ykkˆsen ja asetetun arvon v‰lilt‰.`
+md`M√§√§rit√§ osallistuvien optimoinnissa k√§ytett√§v√§t parametrit. Ryhmien koko arvotaan satunnaisesti ykk√∂sen ja asetetun arvon v√§lill√§. V√§hint√§√§n asetettu prosenttiosuuden verran ryhmist√§ saa koon '1'. Tapahtumat joihin ryhm√§ haluaa menn√§ ja niiden lukum√§√§r√§ arvotaan satunnaisesti ykk√∂sen ja asetetun arvon v√§lilt√§.`
 )})
     },
     {
@@ -33,7 +33,7 @@ slider({
   min: 1,
   max: 300,
   step: 1,
-  title: "?? Osallistuvien ryhmien lukum‰‰r‰",
+  title: "üëß Osallistuvien ryhmien lukum√§√§r√§",
   value: 50
 })
 )})
@@ -51,7 +51,7 @@ slider({
   min: 1,
   max: 6,
   step: 1,
-  title: "???????? Ryhm‰n maksimikoko",
+  title: "üëß‚Äçüë¶üëß‚Äç Ryhm√§n maksimikoko",
   value: 5
 })
 )})
@@ -70,7 +70,7 @@ slider({
   max: 1, 
   step: 0.01, 
   format: ".0%",
-  title: 'Kuinka monta prosenttia ryhmist‰ asetetaan yhden henkilˆn kokoisiksi pakosti'
+  title: 'Kuinka monta prosenttia ryhmist√§ asetetaan yhden henkil√∂n kokoisiksi pakosti'
 })
 )})
     },
@@ -87,7 +87,7 @@ slider({
   min: 5,
   max: 300,
   step: 1,
-  title: "?? Tapahtumien lukum‰‰r‰",
+  title: "üé≤ Tapahtumien lukum√§√§r√§",
   value: 30
 })
 )})
@@ -105,7 +105,7 @@ slider({
   min: 1,
   max: 3,
   step: 1,
-  title: "Tapahtumien miniosallistujam‰‰r‰",
+  title: "Tapahtumien miniosallistujam√§√§r√§",
   value:2
 })
 )})
@@ -123,7 +123,7 @@ slider({
   min: 2,
   max: 7,
   step: 1,
-  title: "Tapahtumien maksimiosallistuajm‰‰r‰",
+  title: "Tapahtumien maksimiosallistuajm√§√§r√§",
   value: 6,
 })
 )})
@@ -171,7 +171,7 @@ md `### PADG`
     {
       inputs: ["md"],
       value: (function(md){return(
-md `Kokonaisonnellisuus (jos jokainen asetetaan omaan ykkˆsvalintaansa onnellisuus on 100%)`
+md `Kokonaisonnellisuus (jos jokainen asetetaan omaan ykk√∂svalintaansa onnellisuus on 100%)`
 )})
     },
     {
@@ -183,7 +183,7 @@ md `Kokonaisonnellisuus (jos jokainen asetetaan omaan ykkˆsvalintaansa onnellisu
     {
       inputs: ["md","arrangement","numOsallistujat"],
       value: (function(md,arrangement,numOsallistujat){return(
-md `${arrangement.filter(ele => ele.assignment===-1).length} (${Math.round(arrangement.filter(ele => ele.assignment===-1).length/numOsallistujat*10000)/100}%) ryhm‰‰ j‰i ilman paikkaa`
+md `${arrangement.filter(ele => ele.assignment===-1).length} (${Math.round(arrangement.filter(ele => ele.assignment===-1).length/numOsallistujat*10000)/100}%) ryhm√§√§ j√§i ilman paikkaa`
 )})
     },
     {
@@ -207,7 +207,7 @@ md `Kokonaisonnellisuus`
     {
       inputs: ["md","randomArrangement","numOsallistujat"],
       value: (function(md,randomArrangement,numOsallistujat){return(
-md `${randomArrangement.filter(ele => ele.assignment===-1).length} (${Math.round(randomArrangement.filter(ele => ele.assignment===-1).length/numOsallistujat*10000)/100}%) ryhm‰‰ j‰i ilman paikkaa`
+md `${randomArrangement.filter(ele => ele.assignment===-1).length} (${Math.round(randomArrangement.filter(ele => ele.assignment===-1).length/numOsallistujat*10000)/100}%) ryhm√§√§ j√§i ilman paikkaa`
 )})
     },
     {
@@ -231,7 +231,7 @@ md `## Optimointialgoritmit`
     {
       inputs: ["md"],
       value: (function(md){return(
-md `Optimoinnin tavoitteena on maksimoida listassa ***L*** oleva tyytyv‰isyys`
+md `Optimoinnin tavoitteena on maksimoida listassa ***L*** oleva tyytyv√§isyys`
 )})
     },
     {
@@ -243,11 +243,13 @@ runPADGMultipleTimes(L,events,groups)
     },
     {
       name: "runPADGMultipleTimes",
-      inputs: ["PADGopt","L","totalHappiness","groups","numOsallistujat","numTapahtumat"],
-      value: (function(PADGopt,L,totalHappiness,groups,numOsallistujat,numTapahtumat){return(
+      inputs: ["PADGopt","L","totalHappiness","groups","numTapahtumat"],
+      value: (function(PADGopt,L,totalHappiness,groups,numTapahtumat){return(
 function runPADGMultipleTimes(LL,evnts,grps) {
+  console.log('gg')
   let arrangement = PADGopt(L,evnts,grps,grps)
-  let happiness = totalHappiness(arrangement,groups)/numOsallistujat
+  
+  let happiness = totalHappiness(arrangement,groups)/groups.length
   let grp = grps.slice()
   let numOptRounds = 5
   for(let round = 1; round < numOptRounds; round++) {
@@ -319,10 +321,6 @@ function runPADGMultipleTimes(LL,evnts,grps) {
       }
     })
   }
-  //Check that the arrangement is ok (ie every event has no more than max amount of participants and there are no 
-  //event assignments to events where minimum number of players is not reached
-  
-  
   
   return arrangement
 }
@@ -331,7 +329,7 @@ function runPADGMultipleTimes(LL,evnts,grps) {
     {
       inputs: ["md"],
       value: (function(md){return(
-md `PADGopt (phantom aware dynamic greedy) on algoritmi, joka yritt‰‰ asettaa listasta L aina sen elementin joka tuottaisi maksimim‰‰r‰n onnellisuutta. Siin‰ on kuitenkin erillinen deficit-termi, joka est‰‰ suuren m‰‰r‰n haamueventtien luomisen. Haamueventti on eventti johon jokin ryhm‰ tai jotkin ryhm‰t haluaisivat, mutta heid‰n yhteenlaskettu m‰‰r‰ ei riit‰ saamaan eventti‰ tapahtumaan`
+md `PADGopt (phantom aware dynamic greedy) on algoritmi, joka yritt√§√§ asettaa listasta L aina sen elementin joka tuottaisi maksimim√§√§r√§n onnellisuutta. Siin√§ on kuitenkin erillinen deficit-termi, joka est√§√§ suuren m√§√§r√§n haamueventtien luomisen. Haamueventti on eventti johon jokin ryhm√§ tai jotkin ryhm√§t haluaisivat, mutta heid√§n yhteenlaskettu m√§√§r√§ ei riit√§ saamaan eventti√§ tapahtumaan`
 )})
     },
     {
@@ -502,7 +500,6 @@ md `PADGopt (phantom aware dynamic greedy) on algoritmi, joka yritt‰‰ asettaa li
   let allEvents = evnt.slice().map(ele => {
     return {...ele, groups: []}})
   
-    //define playercounter for allEvents
   allEvents.playerCount = (eventName) => {
     // function to count how many players are already assigned to an event   
     let e = allEvents.findIndex(ele => {
@@ -580,8 +577,9 @@ md `PADGopt (phantom aware dynamic greedy) on algoritmi, joka yritt‰‰ asettaa li
           let Mind = M.findIndex(m => m.name === ele)
           M[Mind].assignment = eInd
         })
+        
       }
-      //remove every group from V so they will not be placed again
+      //remove this group from V so they will not be placed again
       V = V.filter(ele => ele.name !== randomGroupToThisEvent[0].name)
       randomGroupToThisEvent = V.filter(ele => {
       return typeof(ele.pref.find(p => p===eInd)) !== 'undefined'
@@ -597,6 +595,62 @@ md `PADGopt (phantom aware dynamic greedy) on algoritmi, joka yritt‰‰ asettaa li
 )})
     },
     {
+      inputs: ["checkArrangement","arrangement","groups","events"],
+      value: (function(checkArrangement,arrangement,groups,events){return(
+checkArrangement(arrangement, groups,events) ? 'PADGopt tuottaa hyv√§ksytyn sijoituksen' : 'PADGopt ei tuota hyv√§ksytty√§ sijoitusta'
+)})
+    },
+    {
+      inputs: ["checkArrangement","randomArrangement","groups","events"],
+      value: (function(checkArrangement,randomArrangement,groups,events){return(
+checkArrangement(randomArrangement, groups,events) ? 'RandomArrangement tuottaa hyv√§ksytyn sijoituksen' : 'RandomArrangement ei tuota hyv√§ksytty√§ sijoitusta'
+)})
+    },
+    {
+      name: "checkArrangement",
+      value: (function(){return(
+(arr,grp,evnts) => {
+  //checks if the arrangement is a valid one (ie. no event has less than minimum and no more than maximum number of   //attendees
+  // OUTPUT
+  // 1 = arr is valid
+  // 0 = arr is not valid
+  let arrToUse = JSON.parse(JSON.stringify(arr));
+  let valid = 1;
+  evnts.forEach(e => {
+    let eInd = evnts.findIndex(ee => ee.name === e.name) // Should have just used a for loop...
+    let numPlayers = 0
+    let groupsAttending = arrToUse.filter(a => a.assignment === eInd)
+    if(groupsAttending.length >0) {
+      groupsAttending = groupsAttending.map(gr => {
+        let groupdata = grp.find(g => {
+          return g.name === gr.name
+        })
+
+        return {... gr, size: groupdata.size}
+      })
+      numPlayers = groupsAttending.reduce((total,gr) => {
+        
+        return total + gr.size
+      
+      },0)
+    
+
+      if(numPlayers < e.min){
+        console.log(numPlayers)
+        console.log(e)
+        valid = 0
+      }
+      if(numPlayers > e.max) {
+        valid = 0
+      }
+    }
+  })
+  
+  return valid
+  }
+)})
+    },
+    {
       inputs: ["md"],
       value: (function(md){return(
 md `## Generoidaan optimoitava data`
@@ -605,13 +659,13 @@ md `## Generoidaan optimoitava data`
     {
       inputs: ["md"],
       value: (function(md){return(
-md `***L*** on lista, miss‰ on jokaisen ryhm‰n jokaiseen tapahtumaan lis‰‰misest‰ saatava tyytyv‰isyys`
+md `***L*** on lista, miss√§ on jokaisen ryhm√§n jokaiseen tapahtumaan lis√§√§misest√§ saatava tyytyv√§isyys`
 )})
     },
     {
       name: "L",
-      inputs: ["numOsallistujat","numTapahtumat","groups"],
-      value: (function(numOsallistujat,numTapahtumat,groups)
+      inputs: ["numOsallistujat","numTapahtumat","groups","numHalukkuus"],
+      value: (function(numOsallistujat,numTapahtumat,groups,numHalukkuus)
 {
   let L = []
   for(let i=0;i<numOsallistujat;i++) {
@@ -619,7 +673,7 @@ md `***L*** on lista, miss‰ on jokaisen ryhm‰n jokaiseen tapahtumaan lis‰‰misest
       let ind = groups[i].pref.indexOf(j)
       let gain = 0
       if(ind!== -1) {
-        gain = 1/(ind+1)
+        gain = numHalukkuus - ind
       }
       L.push({
         name: groups[i].name,
@@ -636,7 +690,7 @@ md `***L*** on lista, miss‰ on jokaisen ryhm‰n jokaiseen tapahtumaan lis‰‰misest
     {
       inputs: ["md"],
       value: (function(md){return(
-md` ***groups*** on taulukko, jossa on henkilˆiden nimet ja halukkuudet osallistua mihinkin tapahtumaan`
+md` ***groups*** on taulukko, jossa on henkil√∂iden nimet ja halukkuudet osallistua mihinkin tapahtumaan`
 )})
     },
     {
@@ -699,7 +753,7 @@ names.map(nimi => {
     {
       inputs: ["md"],
       value: (function(md){return(
-md `***events*** on taulukko, jossa on tapahtuman nimi ja minimi ja maksimim‰‰r‰ osallistujia`
+md `***events*** on taulukko, jossa on tapahtuman nimi ja minimi ja maksimim√§√§r√§ osallistujia`
 )})
     },
     {
@@ -939,7 +993,7 @@ require("d3-format@1")
 };
 
 const notebook = {
-  id: "a94651ff4bb1a056@1026",
+  id: "a94651ff4bb1a056@1084",
   modules: [m0,m1]
 };
 
