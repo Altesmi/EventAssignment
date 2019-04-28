@@ -1,11 +1,11 @@
 // URL: https://observablehq.com/@altesmi/event-assignment
 // Title: Event assignment
 // Author: Olli-Pekka Tikkanen (@altesmi)
-// Version: 1084
+// Version: 1285
 // Runtime version: 1
 
 const m0 = {
-  id: "a94651ff4bb1a056@1084",
+  id: "a94651ff4bb1a056@1285",
   variables: [
     {
       inputs: ["md"],
@@ -85,7 +85,7 @@ slider({
       value: (function(slider){return(
 slider({
   min: 5,
-  max: 300,
+  max: 100,
   step: 1,
   title: "🎲 Tapahtumien lukumäärä",
   value: 30
@@ -103,7 +103,7 @@ slider({
       value: (function(slider){return(
 slider({
   min: 1,
-  max: 3,
+  max: 4,
   step: 1,
   title: "Tapahtumien miniosallistujamäärä",
   value:2
@@ -148,6 +148,29 @@ slider({
     {
       name: "numHalukkuus",
       inputs: ["Generators","viewof numHalukkuus"],
+      value: (G, _) => G.input(_)
+    },
+    {
+      inputs: ["md"],
+      value: (function(md){return(
+md `**Kuinka paljon painotetaan halukkuuksia ja kuinka paljon ryhmia (1=painotetaan vain halukkuuksia, 0=painotetaan vain että ryhmä pääsee johonkin tapahtumaan)**`
+)})
+    },
+    {
+      name: "viewof alpha",
+      inputs: ["slider"],
+      value: (function(slider){return(
+slider({
+  min: 0.1,
+  max: 1,
+  step: 0.01,
+  title: "Alpha"
+})
+)})
+    },
+    {
+      name: "alpha",
+      inputs: ["Generators","viewof alpha"],
       value: (G, _) => G.input(_)
     },
     {
@@ -236,22 +259,21 @@ md `Optimoinnin tavoitteena on maksimoida listassa ***L*** oleva tyytyväisyys`
     },
     {
       name: "arrangement",
-      inputs: ["runPADGMultipleTimes","L","events","groups"],
-      value: (function(runPADGMultipleTimes,L,events,groups){return(
-runPADGMultipleTimes(L,events,groups)
+      inputs: ["runPADGMultipleTimes","L","events","groups","updateL"],
+      value: (function(runPADGMultipleTimes,L,events,groups,updateL){return(
+runPADGMultipleTimes(L,events,groups,updateL)
 )})
     },
     {
       name: "runPADGMultipleTimes",
       inputs: ["PADGopt","L","totalHappiness","groups","numTapahtumat"],
       value: (function(PADGopt,L,totalHappiness,groups,numTapahtumat){return(
-function runPADGMultipleTimes(LL,evnts,grps) {
-  console.log('gg')
-  let arrangement = PADGopt(L,evnts,grps,grps)
+function runPADGMultipleTimes(LL,evnts,grps,updateFun) {
   
+  let arrangement = PADGopt(L,evnts,grps,grps,updateFun)
   let happiness = totalHappiness(arrangement,groups)/groups.length
   let grp = grps.slice()
-  let numOptRounds = 5
+  let numOptRounds = 0
   for(let round = 1; round < numOptRounds; round++) {
     //find groups that were not set to any event
     let groupsNotAssigned = arrangement.filter(ele => ele.assignment === -1)
@@ -311,13 +333,11 @@ function runPADGMultipleTimes(LL,evnts,grps) {
     }
     newL = newL.sort((a,b) => a.gain - b.gain)
     //console.log(newEvents)
-    let newArrangement = PADGopt(newL,newEvents,newGroups,grps)
+    let newArrangement = PADGopt(newL,newEvents,newGroups,grps,updateFun)
     newArrangement.map(ele => {
       if(ele.assignment !== -1) {
         let arrInd = arrangement.findIndex(arrEle => arrEle.name === ele.name)
         arrangement[arrInd].assignment = ele.assignment
-        console.log(ele)
-        console.log('we did it')
       }
     })
   }
@@ -335,14 +355,14 @@ md `PADGopt (phantom aware dynamic greedy) on algoritmi, joka yrittää asettaa 
     {
       name: "PADGopt",
       value: (function(){return(
-(L,evnt,grp,grpAll) => {
-  //copy arrays with slice() so that the original data is not changed
-  let LL = L.slice()
+(Lis,evnt,grp,grpAll,updateFun) => {
+  let LL = JSON.parse(JSON.stringify(Lis))
+  let evn = JSON.parse(JSON.stringify(evnt))
   let M = grp.map(e => {
     return {name: e.name,assignment: -1}
   })
-  
-  let S = evnt.slice().map(ele => {
+
+  let S = evn.map(ele => {
     return {
       name: ele.name,
       min: ele.min,
@@ -350,12 +370,11 @@ md `PADGopt (phantom aware dynamic greedy) on algoritmi, joka yrittää asettaa 
       groups: ele.hasOwnProperty('groups') ? ele.groups : []
     }
   })
-
   // function definitions for S
   if(typeof(S.playerCount) === 'undefined') {
     S.playerCount = (e) => {
       // function to count how many players are already assigned to an event
-      
+
       if(S[e].groups.length > 0) {
         return S[e].groups.reduce((a, b) => {
           return a+grpAll.filter(g=>g.name === b)[0].size
@@ -374,16 +393,18 @@ md `PADGopt (phantom aware dynamic greedy) on algoritmi, joka yrittää asettaa 
     P.push({name: newEntry.name, 
             min: newEntry.min, 
             max: newEntry.max, 
-            groups: []
            })
   }
 
   P.removeEntry = (eventName) => {
-    P.filter(ele => ele.name !== eventName)
+    let ind = P.findIndex(ele => ele.name === eventName)
+
+    P.splice(ind,1)
   }
 
   P.includes = (eventName) => {
     //check if event named eventName is in P
+    
     if(P.filter(ele => ele.name === eventName).length === 1) {
       return 1
     } else {
@@ -397,40 +418,58 @@ md `PADGopt (phantom aware dynamic greedy) on algoritmi, joka yrittää asettaa 
 
   //initialize V to be the same as groups
   let V = grp.slice()
-  
+
   //MAIN LOOP STARTS HERE
-  //console.log(LL)
+
+  LL = LL.filter(ele => ele.gain > 0)
+  
   while(LL.length>0) {
     let u = LL.pop() // u is the last index of LL
-    if(u.gain === 0) {
+    // check if there are enough people signed up for this game
+    // in order to avoid matching some group with this event 
+    // without hope of this event ever happening
+    let numPlayersToThisEvent = 0
+    grp.filter(ele => {
+
+      return typeof(ele.pref.find(p => p===u.event)) !== 'undefined'})
+      .forEach(ele => {
+      numPlayersToThisEvent = numPlayersToThisEvent + ele.size
+    })
+    if(u.gain === 0 || numPlayersToThisEvent < evnt[u.event].min) {
       // consider only cases where adding u to event increases happiness
+      // and those where there is even theoretically possible to have
+      // minimum number of players
       continue
     }
-      
-      let Mind = M.findIndex(g => g.name === u.name)
-      //console.log(u.event)
-      //console.log(S.playerCount(u.event))
-      if(M[Mind].assignment === -1 && (S.playerCount(u.event) + u.size) <= evnt[u.event].max) {
-        // user u is not assigned and there is space in the event where we try to place u
 
+      let Mind = M.findIndex(g => g.name === u.name)
+
+      if(M[Mind].assignment === -1 && (S.playerCount(u.event) + u.size) <= S[u.event].max) {
+
+        // user u is not assigned and there is space in the event where we try to place u
+        //console.log('before')
+        //console.log(S.playerCount(u.event))
+        let playersBefore = S.playerCount(u.event)
         if(S.playerCount(u.event) === 0) {
           //no players in S or S is not yet a real event
           if( deficit + (evnt[u.event].min - u.size) < V.length) {
             // adding u to this event does not decrease deficit over critical size
             // since event is not in S add it to P
-            
+
             // add to deficit how much space was left over in this event
             deficit = deficit + (evnt[u.event].min - u.size) 
-            
-            let newPEntry = {
-              name: evnt[u.event].name,
-              min: evnt[u.event].min,
-              max: evnt[u.event].max,
+            if(P.includes(S[u.event].name) === 0) {
+              let newPEntry = {
+                name: evnt[u.event].name,
+                min: evnt[u.event].min,
+                max: evnt[u.event].max,
+              }
+              P.createEntry(newPEntry)
             }
-            P.createEntry(newPEntry)
           } else {
             continue
           }
+
           } else {
             // S has players and is happening anyway
             if(P.includes(evnt[u.event].name) === 1) {
@@ -438,36 +477,143 @@ md `PADGopt (phantom aware dynamic greedy) on algoritmi, joka yrittää asettaa 
             }
 
           }
-          
+
           S[u.event].groups.push(u.name)
+
+
           V = V.filter(ele => ele.name !== u.name)
-          if(S.playerCount(u.event) > evnt[u.event].min && P.includes(evnt[u.event].name) === 0) {
+          if(S.playerCount(u.event) >= S[u.event].min && P.includes(S[u.event].name) === 0) {
             // this event is not a phantom event, set M(u) to a
-            M[Mind] = u.event
+            M[Mind].assignment = u.event
             // remove u from other events
+            
             S.forEach(ele => {
-              ele.groups.filter(e=> e.name !== u.name)
+              if(ele.name !== S[u.event].name) {
+                let nPlayersBefore = S.playerCount(S.findIndex(s=>s.name === ele.name))
+                
+                ele.groups = ele.groups.filter(e => e !== u.name)
+                
+                // check that there are enough players in this event
+                let nPlayersAfter = S.playerCount(S.findIndex(s=>s.name === ele.name))
+                //if nPlayers < ele.min add this event as a phantom event
+                if(nPlayersAfter < nPlayersBefore && nPlayersAfter < ele.min) {
+                  if(P.inclues(ele.name) === 0) {
+                    P.createEntry({
+                      name: ele.name,
+                      min: ele.min,
+                      max: ele.max
+                    })
+                  }
+                  // remove assignment
+
+                  ele.groups.forEach(e => {
+
+                    let MindTemp = M.findIndex(m => m.name === e)
+
+                    if(M[MindTemp].assignment === S.findIndex(s=>s.name === ele.name)) {
+                      M[MindTemp].assignment = -1;
+                    }
+                  })
+                }
+              }
             })
           }
-          
-          if(S.playerCount(u.event) >= evnt[u.event].min && P.includes(evnt[u.event].name) === 1) {
-            // this event is a phantom event but has no enough players to be a real event
-            P.removeEntry(evnt[u.event].name) // remove this event from phantom events
+
+          if(S.playerCount(u.event) >= S[u.event].min && P.includes(S[u.event].name) === 1) {
+            // this event is a phantom event but has now enough players to be a real event
+            //console.log(u.event)
+            P.removeEntry(S[u.event].name) // remove this event from phantom events
+
             S[u.event].groups.forEach(el => {
               let MindTemp = M.findIndex(m => m.name === el)
               M[MindTemp].assignment = u.event
             })
+            
             for(let g in S[u.event].groups) {
               S.forEach(ele => {
-                ele.groups.filter(e => e.name !== S[u.event].groups[g])
+                if(ele.name !== S[u.event].name) {
+                  let nPlayersBefore = S.playerCount(S.findIndex(s=>s.name === ele.name))
+                
+                  ele.groups = ele.groups.filter(e => e !== S[u.event].groups[g])
+
+                  // check that there are enough players in this event
+
+                  let nPlayersAfter = S.playerCount(S.findIndex(s=>s.name === ele.name))
+                  //if nPlayers < ele.min add this event as a phantom event
+                  
+                  if(nPlayersAfter < nPlayersBefore && nPlayersAfter < ele.min) {
+                    if(P.includes(ele.name) === 0) {
+                      P.createEntry({
+                        name: ele.name,
+                        min: ele.min,
+                        max: ele.max
+
+                      })
+                    }
+                    // remove assignment if there is assignment to this event that is now phantom event
+
+                    ele.groups.forEach(e => {
+
+                      let MindTemp = M.findIndex(m => m.name === e)
+
+                      if(M[MindTemp].assignment === S.findIndex(s=>s.name === ele.name)) {
+                        M[MindTemp].assignment = -1;
+                      }
+                    })
+                  }
+                }
               })
+
             }
+
+          }
+
+          //Update list LL if there was no assignment
+
+          if(M[Mind].assignment === -1) {
+
+            let gInd = grp.findIndex(g => g.name === u.name)
+            LL = updateFun(LL,grp,gInd)
+
+
           }
         }
 
       }
+
       return M
+
     }
+)})
+    },
+    {
+      inputs: ["updateL","L","groups"],
+      value: (function(updateL,L,groups){return(
+updateL(L,groups,3)
+)})
+    },
+    {
+      name: "updateL",
+      inputs: ["alpha","numHalukkuus"],
+      value: (function(alpha,numHalukkuus){return(
+(LL,grp,gInd) => {
+  /*Updates the list LL so that gain increases as possibilities for 
+  assignment decrease */
+  LL.forEach(ele => {
+    
+    if(ele.name===grp[gInd].name ) {
+      //calculate the number of preferences
+      let numPref = grp[gInd].pref.length
+
+      let numPossibilities = LL.filter(g=>g.gain > 0).filter(g => g.name ===ele.name).length
+      if(numPossibilities < numPref && numPossibilities > 1) {
+        ele.gain = ele.gain + (1.0-alpha)/(numPossibilities-1)*(numPref-numPossibilities)/(numHalukkuus-1)
+      }
+    }
+  })
+  
+  return LL.sort((a,b) => a.gain-b.gain)
+}
 )})
     },
     {
@@ -480,7 +626,7 @@ md `PADGopt (phantom aware dynamic greedy) on algoritmi, joka yrittää asettaa 
  let newRandomArrangement = []
  let newRandomhappiness = 0
  //try the random arrangement 100 times to see if there are better matches
- for(let i=0;i<1000;i++) {
+ for(let i=0;i<300;i++) {
    newRandomArrangement = randomOpt(events,groups)
    newRandomhappiness = totalHappiness(newRandomArrangement,groups)/numOsallistujat
    if(newRandomhappiness > randomhappiness) {
@@ -636,11 +782,13 @@ checkArrangement(randomArrangement, groups,events) ? 'RandomArrangement tuottaa 
     
 
       if(numPlayers < e.min){
-        console.log(numPlayers)
+        console.log('min')
         console.log(e)
         valid = 0
       }
       if(numPlayers > e.max) {
+        console.log('max')
+        console.log(e)
         valid = 0
       }
     }
@@ -664,8 +812,8 @@ md `***L*** on lista, missä on jokaisen ryhmän jokaiseen tapahtumaan lisäämi
     },
     {
       name: "L",
-      inputs: ["numOsallistujat","numTapahtumat","groups","numHalukkuus"],
-      value: (function(numOsallistujat,numTapahtumat,groups,numHalukkuus)
+      inputs: ["numOsallistujat","numTapahtumat","groups","alpha","numHalukkuus"],
+      value: (function(numOsallistujat,numTapahtumat,groups,alpha,numHalukkuus)
 {
   let L = []
   for(let i=0;i<numOsallistujat;i++) {
@@ -673,7 +821,7 @@ md `***L*** on lista, missä on jokaisen ryhmän jokaiseen tapahtumaan lisäämi
       let ind = groups[i].pref.indexOf(j)
       let gain = 0
       if(ind!== -1) {
-        gain = numHalukkuus - ind
+        gain = alpha*(numHalukkuus - ind)
       }
       L.push({
         name: groups[i].name,
@@ -698,7 +846,7 @@ md` ***groups*** on taulukko, jossa on henkilöiden nimet ja halukkuudet osallis
       inputs: ["names","randInt","maxRyhma","percentGroupsizeIsOne","events","numHalukkuus"],
       value: (function(names,randInt,maxRyhma,percentGroupsizeIsOne,events,numHalukkuus){return(
 names.map(nimi => {
-  let groupSize = randInt(maxRyhma,1)
+  let groupSize = randInt(1,maxRyhma,1)
   //This is to set 66% of the groups to of size one
   if(Math.random() > (1-percentGroupsizeIsOne)) {
     groupSize = 1
@@ -715,7 +863,7 @@ names.map(nimi => {
     p = events.findIndex(ele => ele.name === possibleEvents.name)
   } else if(possibleEvents.length < numHalukkuus) {
     //choose how many events the group wants to go
-    let numToGo = randInt(possibleEvents.length,1)
+    let numToGo = randInt(1,possibleEvents.length,1)
     //Sort array of possible events randomly and choose the correct index
     let randomEvents = possibleEvents.sort((a,b)=>0.5-Math.random())
     .slice(0,numToGo)
@@ -724,7 +872,7 @@ names.map(nimi => {
       p.push(events.findIndex(e=>e.name===ele.name))
     })                   
   } else { // there is at least numHalukkuus places, draw integers randomly
-    let numToGo = randInt(numHalukkuus,1)
+    let numToGo = randInt(1,numHalukkuus,1)
     let randomEvents = possibleEvents.sort((a,b)=>0.5-Math.random())
     .slice(0,numToGo)
     //push randomEvents as indexex to p
@@ -763,11 +911,13 @@ md `***events*** on taulukko, jossa on tapahtuman nimi ja minimi ja maksimimää
 {
   let e = []
   for(let i=0;i<numTapahtumat;i++) {
-    let minOsallistujat = randInt(minTapahtuma,1);
+    let minOsallistujat = randInt(minTapahtuma,maxTapahtuma,1);
     let maxOsallistujat = minOsallistujat
-    while(maxOsallistujat <= minOsallistujat) {
-      maxOsallistujat = randInt(maxTapahtuma,1)
-    }
+    /*while(maxOsallistujat <= minOsallistujat) {
+      
+      maxOsallistujat = randInt(minTapahtuma,maxTapahtuma,1)
+      
+    }*/
     e.push({
       name: `tapahtuma${i+1}`,
       min: minOsallistujat,
@@ -781,15 +931,15 @@ md `***events*** on taulukko, jossa on tapahtuman nimi ja minimi ja maksimimää
     {
       name: "randInt",
       value: (function(){return(
-(val,num) => {
+(minNum,maxNum,numValues) => {
   //Returns random integer between 1 and val
   //'num' times. duplicate values are not allowed
-  if(num===1) {
-    return Math.floor(Math.random()*val+1)
+  if(numValues===1) {
+    return Math.floor(Math.random()*(maxNum-minNum+1)+minNum);
   } else {
   let randints = []
-  for(let i=0;i<num;i++) {
-    let u = Math.floor(Math.random()*val+1)
+  for(let i=0;i<numValues;i++) {
+    let u = Math.floor(Math.random()*(maxNum-minNum)+minNum+1)
     if(randints.filter(el => el === u).length>0) {
       i = i-1
       continue
@@ -923,14 +1073,14 @@ function input(config) {
     submit,
     options
   } = config;
+  const wrapper = html`<div></div>`;
   if (!form)
     form = html`<form>
 	<input name=input type=${type} />
   </form>`;
-  const input = form.input;
   Object.keys(attributes).forEach(key => {
     const val = attributes[key];
-    if (val != null) input.setAttribute(key, val);
+    if (val != null) form.input.setAttribute(key, val);
   });
   if (submit)
     form.append(
@@ -949,35 +1099,44 @@ function input(config) {
     form.append(
       html`<div style="font-size: 0.85rem; font-style: italic;">${description}</div>`
     );
-  if (format) format = d3format.format(format);
+  if (format) format = typeof format === "function" ? format : d3format.format(format);
   if (action) {
     action(form);
   } else {
     const verb = submit
       ? "onsubmit"
       : type == "button"
-        ? "onclick"
-        : type == "checkbox" || type == "radio"
-          ? "onchange"
-          : "oninput";
+      ? "onclick"
+      : type == "checkbox" || type == "radio"
+      ? "onchange"
+      : "oninput";
     form[verb] = e => {
       e && e.preventDefault();
-      const value = getValue ? getValue(input) : input.value;
-      if (form.output)
-        form.output.value = display
-          ? display(value)
-          : format
-            ? format(value)
-            : value;
+      const value = getValue ? getValue(form.input) : form.input.value;
+      if (form.output) {
+        const out = display ? display(value) : format ? format(value) : value;
+        if (out instanceof window.Element) {
+          while (form.output.hasChildNodes()) {
+            form.output.removeChild(form.output.lastChild);
+          }
+          form.output.append(out);
+        } else {
+          form.output.value = out;
+        }
+      }
       form.value = value;
       if (verb !== "oninput")
         form.dispatchEvent(new CustomEvent("input", { bubbles: true }));
     };
     if (verb !== "oninput")
-      input.oninput = e => e && e.stopPropagation() && e.preventDefault();
+      wrapper.oninput = e => e && e.stopPropagation() && e.preventDefault();
     if (verb !== "onsubmit") form.onsubmit = e => e && e.preventDefault();
     form[verb]();
   }
+  while (form.childNodes.length) {
+    wrapper.appendChild(form.childNodes[0]);
+  }
+  form.append(wrapper);
   return form;
 }
 )})
@@ -993,7 +1152,7 @@ require("d3-format@1")
 };
 
 const notebook = {
-  id: "a94651ff4bb1a056@1084",
+  id: "a94651ff4bb1a056@1285",
   modules: [m0,m1]
 };
 
